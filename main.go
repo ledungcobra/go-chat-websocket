@@ -16,6 +16,12 @@ import (
 	"sync"
 )
 
+var avatars Avatar = TryAvatars{
+	UseFileSystemAvatar,
+	UseAuthAvatar,
+	UseGravatarAvatar,
+}
+
 type templateHandler struct {
 	once     sync.Once
 	fileName string
@@ -46,7 +52,7 @@ func main() {
 	addr := flag.String("addr", ":9090", "Address of application")
 	flag.Parse()
 	InitAuthProvider()
-	r := newRoom(UseFileSystemAvatar)
+	r := newRoom()
 	r.tracer = tracer.New(os.Stdout)
 	go r.run()
 	http.Handle("/avatars/", http.StripPrefix("/avatars",

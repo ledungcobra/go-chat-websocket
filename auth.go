@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/stretchr/gomniauth"
+	gomniauthcommon "github.com/stretchr/gomniauth/common"
 	"github.com/stretchr/gomniauth/providers/facebook"
 	"github.com/stretchr/gomniauth/providers/github"
 	"github.com/stretchr/gomniauth/providers/google"
@@ -14,6 +15,20 @@ import (
 	"os"
 	"strings"
 )
+
+type ChatUser interface {
+	UniqueID() string
+	AvatarURL() string
+}
+
+type chatUser struct {
+	gomniauthcommon.User
+	uniqueID string
+}
+
+func (u chatUser) UniqueID() string {
+	return u.uniqueID
+}
 
 type authHandler struct {
 	next http.Handler
@@ -67,10 +82,17 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		m := md5.New()
 		_, _ = io.WriteString(m, user.Email())
+		chatUser := &chatUser{User: user}
+		chatUser.uniqueID = fmt.Sprintf("%x", m.Sum(nil))
+		avatarUrl, err := avatars.GetAvatarURL(chatUser)
+		if err != nil {
+			log.Panic("Error when trying to get avatar url", err)
+		}
+
 		authCookievalue := objx.New(map[string]interface{}{
 			"userId":     fmt.Sprintf("%x", m.Sum(nil)),
 			"name":       user.Name(),
-			"avatar_url": user.AvatarURL(),
+			"avatar_url": avatarUrl,
 			"email":      user.Email(),
 		}).MustBase64()
 		http.SetCookie(w, &http.Cookie{
