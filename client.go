@@ -19,12 +19,15 @@ func (c *client) read() {
 		if err != nil {
 			log.Println(err)
 		}
+		c.room.leave <- c
+		close(c.send)
 	}(c.socket)
 	for {
 		var msg *message
 		if err := c.socket.ReadJSON(&msg); err == nil {
 			msg.When = time.Now()
 			msg.Name = c.userData["name"].(string)
+			msg.AvatarURL, _ = c.room.avatar.GetAvatarURL(c)
 			c.room.forward <- msg
 		} else {
 			break
@@ -38,6 +41,7 @@ func (c *client) write() {
 		if err != nil {
 			log.Println(err)
 		}
+		c.room.tracer.Trace("Client write disconnected")
 	}(c.socket)
 	for msg := range c.send {
 		if err := c.socket.WriteJSON(msg); err != nil {

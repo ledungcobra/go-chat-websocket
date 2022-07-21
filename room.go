@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/objx"
 	"log"
 	"net/http"
+	"runtime"
 )
 
 type room struct {
@@ -14,6 +15,7 @@ type room struct {
 	leave   chan *client
 	clients map[*client]bool
 	tracer  tracer.Tracer
+	avatar  Avatar
 }
 
 func (r *room) run() {
@@ -61,6 +63,7 @@ func (r *room) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Panic("Cannot server because of error")
 	}
+
 	client := &client{
 		socket:   socket,
 		send:     make(chan *message, messageBufferSize),
@@ -73,14 +76,16 @@ func (r *room) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}()
 	go client.write()
 	client.read()
+	log.Printf("Number of groutines %d", runtime.NumGoroutine())
 }
 
-func newRoom() *room {
+func newRoom(avatar Avatar) *room {
 	r := &room{
 		forward: make(chan *message),
 		join:    make(chan *client),
 		leave:   make(chan *client),
 		clients: make(map[*client]bool),
+		avatar:  avatar,
 	}
 	return r
 }
